@@ -145,8 +145,8 @@ const imageQualities = [
 	}
 ]
 
-async function processImage(sourceBuffer, destination, filename){
-	const image = sharp(sourceBuffer);
+async function processImage(sourceBufferOrPath, destination, filename){
+	const image = sharp(sourceBufferOrPath);
 	const metadata = await image.metadata();
 	
 	let lossless = false;
@@ -159,14 +159,13 @@ async function processImage(sourceBuffer, destination, filename){
 			continue;
 		}
 
-		await sharp(sourceBuffer)
+		await image
 		.resize({ height: quality.height })
-		.webp({ lossless: lossless, effort: 6, quality: 85 })
+		.webp({ lossless: lossless, effort: 6, quality: 80 })
 		.toFile(`${destination}/${quality.name}_${filename}.webp`);
 	}
 }
-//const fs = require('fs');
-//processImage(fs.readFileSync('./dist/temp/96195951_p0.png'), './dist/temp', '96195951_p0');
+processImage('./dist/temp/cat-stars.jpg', './dist/temp', 'cat-stars');
 
 module.exports = async function handle_post(req, res){
 	const handler = routeMap.get(req.url);
