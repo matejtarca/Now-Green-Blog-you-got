@@ -1,5 +1,6 @@
 const http = require('http');
 const handlePost = require('./handle_post');
+const handleGet = require('./handle_get');
 
 async function getBodyString(req, size){
 	const body = await getBodyBuffer(req, size);
@@ -7,7 +8,7 @@ async function getBodyString(req, size){
 }
 
 function getBodyBuffer(req, size){
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve) => {
 		let body = Buffer.alloc(size);
 		let pos = 0;
 
@@ -50,8 +51,7 @@ const server = http.createServer(async (req, res) => {
 
 			if (requestsJSON){
 				const body = await getBodyString(req, size);
-				const data = JSON.parse(body);
-				req.body = data;
+				req.body = JSON.parse(body);
 			}
 		} catch (error){
 			res.statusCode = 400;
@@ -65,6 +65,8 @@ const server = http.createServer(async (req, res) => {
 		res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 		res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 		res.end();
+	} else if (req.method === "GET") {
+		handleGet(req, res);
 	}
 });
 

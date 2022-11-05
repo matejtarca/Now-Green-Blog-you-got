@@ -1,8 +1,9 @@
 const createTempFile = require('./util/newfile');
 const execPromise = require('./util/exec_promise');
+const crypto = require('crypto');
 const getVideoResolution = require('./util/get_video_resolution');
 
-const markdown = require('markdown-wasm');
+const db = require('better-sqlite3')('src/backend/db/db');
 
 const sharp = require('sharp');
 
@@ -31,13 +32,34 @@ async function upload(req, res){
 }
 
 async function createPost(req, res){
-	console.log(req.body);
-	res.statusCode = 200;
+	if (!req.body.user || !req.body.title || !req.body.content) {
+		res.statusCode = 400;
+		return res.end('Bad Request');
+	}
 
-	//const html = markdown.parse(req.body.content);
-	//console.log(html);
+	try {
+		const newPost = db.prepare('INSERT INTO posts (id, user, title, content, ready) VALUES (?, ?, ?, ?, ?)');
+		const newMedia = db.prepare('INSERT INTO medias (id, post_id, tmp_slug, filename, code) VALUES (?, ?, ?, ?, ?)');
+		const post_id = crypto.randomUUID();
+		const insertMedias = db.transaction((medias) => {
+			for (const media of medias) {
+				const media_id = crypto.randomUUID();
+				newMedia.run(media_id, post_id, media.slug, media.filename, media.code);
+			}
+		});
 
-	res.end('ok');
+		const query = db.transaction((medias) => {
+			newPost.run(post_id, req.body.user, req.body.title, req.body.content, 0);
+			insertMedias(medias); // nested transaction
+		});
+
+		query(req.body.files)
+		res.statusCode = 200;
+		return res.end(post_id);
+	} catch (e) {
+		res.statusCode = 500;
+		return res.end(e.message);
+	}
 }
 
 const processingQualities = [
@@ -81,12 +103,12 @@ const MAX_PARALLEL_OUTPUT_STREAMS = 3;
 
 async function processVideo(source, destination, filename){
 	const [ width, height, bitrate ] = await getVideoResolution(source);
-	
+
 	const commandStart = `ffmpeg -y -hwaccel cuda -i ./dist/temp/${source}`;
 	//const commandStart = `ffmpeg -y -i ./dist/temp/${source}`;
-	
+
 	let command = commandStart + ` -c:a aac -b:a 96k -map a ${destination}/audio_${filename}.m4a`;
-	
+
 	let streams = 0;
 
 	for (const quality of processingQualities){
@@ -101,7 +123,7 @@ async function processVideo(source, destination, filename){
 
 		command += ` -c:a aac -b:a ${quality.audioBitrate} -c:v h264_nvenc -preset p6 -vf "hwupload_cuda,scale_cuda=w=${targetWidth}:h=${quality.height}" -maxrate ${bitrate} -rc constqp -cq ${quality.quality} ${destination}/${quality.name}_${filename}`;
 		//command += ` -c:a copy -preset medium -vf scale=${targetWidth}:${quality.height} -crf ${quality.quality} ${destination}/${quality.name}_${filename}`;
-		
+
 		console.log(command);
 		console.log(quality);
 
@@ -148,11 +170,11 @@ const imageQualities = [
 async function processImage(sourceBufferOrPath, destination, filename){
 	const image = sharp(sourceBufferOrPath);
 	const metadata = await image.metadata();
-	
+
 	let lossless = false;
 	if (metadata.format === 'png'){
 		lossless = true;
-	} 
+	}
 
 	for (const quality of imageQualities){
 		if (quality.height > metadata.height){

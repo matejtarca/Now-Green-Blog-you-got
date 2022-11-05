@@ -5,11 +5,248 @@
     <title>Create a green blog post!</title>
     <style>
         body {
-            background-color: #00ff00;
+            background-color: #1E1E1E;
+            font-family: "Courier New", serif;
+        }
+        h1 {
+            font-style: normal;
+            font-weight: 700;
+            font-size: 48px;
+            line-height: 54px;
+            color: #AAAAAA;
+            margin-bottom: 4px;
+        }
+        h2 {
+            /* Header/Header_3 */
+
+            font-style: normal;
+            font-weight: 700;
+            font-size: 32px;
+            line-height: 36px;
+
+            /* Content */
+
+            color: #AAAAAA;
+        }
+        h3 {
+            /* Text/Text_18px */
+            font-style: normal;
+            font-weight: 400;
+            font-size: 18px;
+            line-height: 20px;
+
+            /* Content */
+            color: #AAAAAA;
+        }
+        input {
+            color: white;
+        }
+        .text-input {
+            font-style: normal;
+            font-weight: 700;
+            font-size: 40px;
+            line-height: 45px;
+            font-family: "Courier New", serif;
+
+            /* Content */
+
+            color: #AAAAAA;
+
+            background: none;
+            border: none;
+            margin-bottom: 50px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .text-input:focus, .textarea-input:focus {
+            outline: none;
+        }
+
+        .textarea-input {
+            width: 100%;
+            height: 40vh;
+            background: none;
+
+            font-family: 'Courier New', serif;
+            font-style: normal;
+            font-weight: 400;
+            font-size: 18px;
+            line-height: 20px;
+            color: #AAAAAA;
+            padding: 5px;
+            margin-bottom: 15px;
+        }
+
+        .button-primary {
+            font-family: 'Courier New', serif;
+            font-style: normal;
+            font-weight: 400;
+            font-size: 18px;
+            line-height: 20px;
+
+            background: #FCAC00;
+            border-radius: 4px;
+
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .content {
+            display: flex;
+            gap: 20px;
+            flex-direction: row;
+            height: 100%;
+            margin-top: 50px;
+        }
+        .centered-form {
+            display: flex;
+            flex-direction: column;
+            align-items: end;
+            width: 60%;
+            padding: 15px;
+        }
+        .media-upload {
+            display: flex;
+            flex-direction: column;
+            width: 40%;
+            align-items: start;
+        }
+        .file-previews-table {
+            text-align: left;
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 15px;
+        }
+        .file-previews-table th {
+            color: white;
+            border-bottom: 1px solid white;
+        }
+        .file-previews-table td {
+            color: white;
+            padding: 10px;
         }
     </style>
 </head>
 <body>
-<h1></h1>
+<h1>Now Green <span style="color: #FCAC00;">Blog</span> You Got</h1>
+<h3>Your guide how to save an energy...</h3>
+<div class="content">
+    <div class="centered-form">
+        <input type="text" id="title" placeholder="Title" class="text-input">
+        <textarea id="content" placeholder="Content" class="textarea-input"></textarea>
+        <button id="create-button" class="button-primary">Create</button>
+        <p id="uploadState" style="color: white"></p>
+    </div>
+    <div class="media-upload">
+        <h2>Upload your media files</h2>
+        <h3>Choose carefully what you want to upload</h3>
+        <button class="button-primary" id="file-upload-button">Upload</button>
+        <input type="file"
+               id="file-upload" name="avatar"
+               accept="image/png, image/jpeg, video/mp4, video/quicktime"
+               multiple
+               class="file-upload"
+               hidden
+        >
+        <table id="file-previews" class="file-previews-table">
+            <tr><th style="width: 50%">Preview</th><th>Image code</th></tr>
+        </table>
+    </div>
+</div>
+
+<script>
+    const HOST_NAME = "http://localhost:3000"
+
+    document.getElementById("create-button").addEventListener("click", sendPost);
+    document.getElementById("file-upload").addEventListener("change", handleFile);
+    document.getElementById("file-upload-button").addEventListener("click", () => {
+        document.getElementById("file-upload").click();
+    });
+
+    const uploadQueue = [];
+    const uploadedFilesData = [];
+
+    function handleFile() {
+        for (let i = 0; i < this.files.length; i++) {
+            const file = this.files[i];
+            document.getElementById("file-previews").innerHTML += `
+            <tr>
+                <td><img src="${URL.createObjectURL(file)}" width="200px" alt="image"></td>
+                <td>
+                    <p>${file.name}</p>
+                    <p>Code: ![image_name](${uploadQueue.length})</p>
+                </td>
+            </tr>
+            `;
+            uploadQueue.push(file);
+        }
+        this.value = null;
+    }
+
+    function sendPost() {
+        submitFiles();
+    }
+
+    function submitPost() {
+        const title = document.getElementById("title").value;
+        const content = document.getElementById("content").value;
+        fetch(`${HOST_NAME}/create-post`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user: "adam",
+                title,
+                content,
+                files: uploadedFilesData
+            })
+        }).then(async res => {
+            const text = await res.text();
+            if (res.status === 200) {
+                document.getElementById("uploadState").innerText = `Post ID: ${text}`;
+            } else {
+                document.getElementById("uploadState").innerText = `Error: ${res.status}`;
+            }
+        });
+    }
+
+    function submitFiles(){
+        const queueLength = uploadQueue.length;
+        let uploadedFiles = 0;
+        if (uploadQueue.length === 0) {
+            submitPost();
+        }
+        uploadQueue.forEach((file, index) => {
+            const xhr = new XMLHttpRequest();
+
+            xhr.open("POST", `${HOST_NAME}/upload`, true);
+
+            xhr.upload.onprogress = function (event){
+                const loadPercent = event.loaded / event.total * 100;
+                document.getElementById("uploadState").innerText = `Uploading media ${index + 1}/${queueLength}: ${loadPercent.toFixed(2)}%`;
+            }
+
+            xhr.onload = (event) => {
+                if (xhr.status !== 200){
+                    console.log("ERROR")
+                }
+
+                uploadedFilesData.push({filename: file.name, slug: xhr.responseText, code: `${index}`});
+                uploadedFiles += 1;
+                if (uploadedFiles === queueLength){
+                    submitPost();
+                }
+            }
+
+            xhr.onerror = (event) => {
+                console.log("ERROR")
+            }
+
+            xhr.send(file);
+        })
+    }
+</script>
 </body>
 </html>

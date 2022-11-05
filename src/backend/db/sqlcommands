@@ -1,0 +1,18 @@
+DROP TABLE posts;
+DROP TABLE medias;
+
+CREATE TABLE posts (
+	id TEXT PRIMARY KEY,
+	user TEXT NOT NULL,
+   	title TEXT NOT NULL,
+   	content TEXT NOT NULL,
+   	ready INTEGER NOT NULL
+);
+
+CREATE TABLE medias (
+	id TEXT PRIMARY KEY,
+	post_id TEXT,
+   	tmp_slug TEXT,
+   	filename TEXT,
+   	code TEXT
+);
