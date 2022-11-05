@@ -66,7 +66,7 @@ async function createPost(req, res){
 
 		res.statusCode = 200;
 		res.end(post_id);
-		
+
 		// continue with media processing
 
 		let videos = [];
@@ -85,7 +85,7 @@ async function createPost(req, res){
 		}
 
 		promises.push(processVideos(videos));
-		
+
 		await Promise.all(promises);
 
 		db.prepare('UPDATE posts SET ready = 1 WHERE id = ?').run(post_id);
@@ -226,7 +226,6 @@ async function processImage(sourceBufferOrPath, destination, filename){
 		.toFile(`${destination}/${quality.name}_${filename}.webp`);
 	}
 }
-//processImage('./dist/temp/cat-stars.jpg', './dist/temp', 'cat-stars');
 
 module.exports = async function handle_post(req, res){
 	const handler = routeMap.get(req.url);

@@ -3,41 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Create a green blog post!</title>
+    <link rel="stylesheet" href="../public/styles/main.css">
+
     <style>
-        body {
-            background-color: #1E1E1E;
-            font-family: "Courier New", serif;
-        }
-        h1 {
-            font-style: normal;
-            font-weight: 700;
-            font-size: 48px;
-            line-height: 54px;
-            color: #AAAAAA;
-            margin-bottom: 4px;
-        }
-        h2 {
-            /* Header/Header_3 */
-
-            font-style: normal;
-            font-weight: 700;
-            font-size: 32px;
-            line-height: 36px;
-
-            /* Content */
-
-            color: #AAAAAA;
-        }
-        h3 {
-            /* Text/Text_18px */
-            font-style: normal;
-            font-weight: 400;
-            font-size: 18px;
-            line-height: 20px;
-
-            /* Content */
-            color: #AAAAAA;
-        }
         input {
             color: white;
         }
@@ -170,12 +138,13 @@
     function handleFile() {
         for (let i = 0; i < this.files.length; i++) {
             const file = this.files[i];
+            const isVideo = file.type.startsWith("video/");
             document.getElementById("file-previews").innerHTML += `
             <tr>
                 <td><img src="${URL.createObjectURL(file)}" width="200px" alt="image"></td>
                 <td>
                     <p>${file.name}</p>
-                    <p>Code: ![image_name](${uploadQueue.length})</p>
+                    <p>Code: ![${isVideo ? 'video' : 'image'}](${uploadQueue.length})</p>
                 </td>
             </tr>
             `;
@@ -205,10 +174,16 @@
         }).then(async res => {
             const text = await res.text();
             if (res.status === 200) {
-                document.getElementById("uploadState").innerText = `Post ID: ${text}`;
+                document.getElementById("uploadState").innerHTML = `Post ID: <a href="http://localhost:3000/posts/adam/${text}">${text}</a>`;
             } else {
                 document.getElementById("uploadState").innerText = `Error: ${res.status}`;
             }
+
+            uploadQueue.length = 0;
+            uploadedFilesData.length = 0;
+            document.getElementById("file-previews").innerHTML = "";
+            document.getElementById("title").value = "";
+            document.getElementById("content").value = "";
         });
     }
 
