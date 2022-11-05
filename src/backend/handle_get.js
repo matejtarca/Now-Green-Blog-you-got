@@ -1,24 +1,44 @@
 const markdown = require('markdown-wasm');
 const fs = require("fs");
 const db = require('better-sqlite3')('src/backend/db/db', { readonly: true });
+const pathlib = require('path').posix;
 
 const handlePostList = (req, res) => {
     res.statusCode = 200;
     res.end('<html><body><h1>Post list</h1></body></html>');
 }
 
-const handlePublic = (req, res) => {
-    res.statusCode = 200
+const ROOT = pathlib.resolve(".") + "/";
 
-    fs.readFile(`src/${req.url}`, "utf8", function(err, data){
-        if (err) {
-            res.statusCode = 500;
-            res.end(err.message);
-        } else {
-            res.writeHead(200, {'Content-Type': 'text/css'});
-            res.end(data);
-        }
-    });
+const handlePublic = async (req, res) => {
+    const path = pathlib.resolve(pathlib.join(ROOT, req.url));
+    
+    if (!path.startsWith(ROOT)) {
+        res.statusCode = 403;
+        return res.end('Access denied');
+    }
+    
+    try {
+        var stat = await fs.promises.stat(path);
+    } catch (e) {
+        res.statusCode = 404;
+        console.log(e)
+        return res.end("File not found");
+    }
+
+    if (stat.isDirectory()) {
+        res.statusCode = 403;
+        return res.end("Directory access is forbidden");
+    }
+
+    if (req.url.endsWith(".css")) {
+        res.setHeader('Content-Type', 'text/css');
+    }
+
+    res.setHeader('Content-Length', stat.size);
+
+    const stream = fs.createReadStream(path);
+    stream.pipe(res);
 }
 
 const postProcessHtml = (html, postID, username) => {
@@ -72,7 +92,7 @@ module.exports = async function handle_get(req, res){
         <head>
         <meta charset="UTF-8">
         <title>${post.title}</title>
-    <link rel="stylesheet" href="/public/styles/main.css">
+    <link rel="stylesheet" href="/dist/styles/main.css">
     <style>
     .content {
         width: 100%;
@@ -98,7 +118,7 @@ module.exports = async function handle_get(req, res){
 <head>
     <meta charset="UTF-8">
     <title>${post.title}</title>
-    <link rel="stylesheet" href="/public/styles/main.css">
+    <link rel="stylesheet" href="/dist/styles/main.css">
     <style>
     .content-main {
         padding: 15px;
@@ -118,7 +138,7 @@ module.exports = async function handle_get(req, res){
 `);
     }
 
-    if (req.url.startsWith("/public/")) {
+    if (req.url.startsWith("/dist/")) {
         return handlePublic(req, res);
     }
 

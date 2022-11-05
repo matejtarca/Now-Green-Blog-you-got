@@ -72,6 +72,10 @@ async function createPost(req, res){
 		let videos = [];
 		let promises = [];
 
+		const mediaDestination = `./dist/media/${req.body.user.replace("/", "")}/${post_id}`;
+
+		await fs.promises.mkdir(mediaDestination, { recursive: true });
+
 		for (const media of files){
 			const stream = fs.createReadStream(`./dist/temp/${media.slug}`);
 			const fileType = await fileTypeCjs.fromStream(stream);
@@ -80,7 +84,13 @@ async function createPost(req, res){
 			if (fileType.mime.startsWith('video/')){
 				videos.push(media);
 			} else if (fileType.mime.startsWith('image/')){
-				promises.push(processImage(stream, './dist/temp', media.filename));
+				promises.push(processImage(`./dist/temp/${media.slug}`, mediaDestination, media.filename));
+			}
+		}
+
+		async function processVideos(videos){
+			for (const video of videos){
+				await processVideo(video.slug, mediaDestination, video.filename);
 			}
 		}
 
@@ -92,12 +102,6 @@ async function createPost(req, res){
 	} catch (e) {
 		res.statusCode = 500;
 		return res.end(e.message);
-	}
-}
-
-async function processVideos(videos){
-	for (const video of videos){
-		await processVideo(video.slug, './dist/temp', video.filename);
 	}
 }
 
