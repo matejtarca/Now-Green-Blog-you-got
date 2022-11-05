@@ -128,7 +128,7 @@
 </div>
 
 <script>
-    const HOST_NAME = "http://localhost:3000"
+    const HOST_NAME = "http://10.84.111.36"
 
     document.getElementById("create-button").addEventListener("click", sendPost);
     document.getElementById("file-upload").addEventListener("change", handleFile);
@@ -164,7 +164,7 @@
     function submitPost() {
         const title = document.getElementById("title").value;
         const content = document.getElementById("content").value;
-        fetch(`${HOST_NAME}/create-post`, {
+        fetch(`${HOST_NAME}/submit-post`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -178,7 +178,7 @@
         }).then(async res => {
             const text = await res.text();
             if (res.status === 200) {
-                document.getElementById("uploadState").innerHTML = `Post ID: <a href="http://localhost:3000/posts/adam/${text}">${text}</a>`;
+                document.getElementById("uploadState").innerHTML = `Post ID: <a href="${HOST_NAME}/posts/adam/${text}">${text}</a>`;
             } else {
                 document.getElementById("uploadState").innerText = `Error: ${res.status}`;
             }

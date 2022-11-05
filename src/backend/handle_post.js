@@ -1,7 +1,7 @@
 const createTempFile = require('./util/newfile');
 const execPromise = require('./util/exec_promise');
 const crypto = require('crypto');
-const getVideoResolution = require('./util/get_video_resolution');
+const getVideoInfo = require('./util/get_video_info');
 
 const db = require('better-sqlite3')('src/backend/db/db');
 
@@ -11,7 +11,7 @@ const fileTypeCjs = require('file-type-cjs');
 
 const routeMap = new Map();
 routeMap.set('/upload', upload);
-routeMap.set('/create-post', createPost);
+routeMap.set('/submit-post', createPost);
 
 async function upload(req, res){
 	console.log('upload');
@@ -59,6 +59,7 @@ async function createPost(req, res){
 
 		for (const file of files){
 			file.slug = file.slug.replace("/", "");
+
 			file.filename = file.filename.replace("/", "");
 		}
 
@@ -82,6 +83,7 @@ async function createPost(req, res){
 			console.log(fileType);
 
 			if (fileType.mime.startsWith('video/')){
+				media.filename = media.filename.slice(0, media.filename.lastIndexOf('.')) + ".mp4";
 				videos.push(media);
 			} else if (fileType.mime.startsWith('image/')){
 				promises.push(processImage(`./dist/temp/${media.slug}`, mediaDestination, media.filename));
@@ -145,12 +147,15 @@ const processingQualities = [
 const MAX_PARALLEL_OUTPUT_STREAMS = 3;
 
 async function processVideo(source, destination, filename){
-	const [ width, height, bitrate ] = await getVideoResolution(source);
+	const [ width, height, bitrate, hasAudio ] = await getVideoInfo(source);
 
 	const commandStart = `ffmpeg -y -hwaccel cuda -i "./dist/temp/${source}"`;
 	//const commandStart = `ffmpeg -y -i ./dist/temp/${source}`;
 
-	let command = `${commandStart} -c:a aac -b:a 96k -map a "${destination}/audio_${filename}.m4a"`;
+	let command = commandStart;
+	if (hasAudio){
+		command += ` -c:a aac -b:a 96k -map a "${destination}/audio_${filename}.m4a"`;
+	}
 
 	let streams = 0;
 

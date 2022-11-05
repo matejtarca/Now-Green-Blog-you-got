@@ -67,8 +67,8 @@ const postProcessHtml = (html, postID, username) => {
 
         // Parse videos
         html = html.replace(`<img src="${media.code}" alt="video">`, `
-<video controls width="250" style="display: block" preload="none">
-    <source src="/dist/media/${username}/${postID}/480p_${media.filename}.mp4">
+<video controls width="800" style="display: block" preload="none">
+    <source src="/dist/media/${username}/${postID}/480p_${media.filename.split(".").slice(0, -1).join(".")}.mp4">
 </video>`);
     })
     return html
@@ -79,9 +79,11 @@ module.exports = async function handle_get(req, res){
     if (req.url === '/') {
         return handlePostList(req, res);
     }
+    console.log(req.url)
 
     if (req.url.startsWith("/posts/")) {
         const splitted = req.url.split("/");
+        console.log(splitted);
         if (splitted.length !== 4) {
             res.statusCode = 400;
             return res.end('<html><body><h1>Bad request</h1></body></html>');
@@ -91,6 +93,7 @@ module.exports = async function handle_get(req, res){
         const postID = splitted[3];
         const getPost = db.prepare('SELECT title, content, ready FROM posts WHERE user = ? AND id = ?');
         const post = getPost.get(username, postID);
+        console.log(username, postID, post);
         if (!post) {
             res.statusCode = 400;
             return res.end('<html><body><h1>Post not found</h1></body></html>');
