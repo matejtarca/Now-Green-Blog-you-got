@@ -138,6 +138,12 @@ module.exports = async function handle_get(req, res){
     <style>
     .content-main {
         padding: 15px;
+        display: flex;
+        justify-content: start;
+        align-items: center;
+    }
+    .content-inner {
+        width: 60%;
     }
     .content {
     margin-top: 15px;
@@ -146,8 +152,10 @@ module.exports = async function handle_get(req, res){
 </head>
 <body>
 <div class="content-main">
+<div class="content-inner">
 <h1>${post.title}</h1>
 <div class="content">${postProcessHtml(content_html, postID, username)}</div>
+</div>
 </div>
 </body>
 </html>
