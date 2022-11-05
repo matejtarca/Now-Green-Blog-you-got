@@ -12,12 +12,12 @@ const ROOT = pathlib.resolve(".") + "/";
 
 const handlePublic = async (req, res) => {
     const path = pathlib.resolve(pathlib.join(ROOT, req.url));
-    
+
     if (!path.startsWith(ROOT)) {
         res.statusCode = 403;
         return res.end('Access denied');
     }
-    
+
     try {
         var stat = await fs.promises.stat(path);
     } catch (e) {
@@ -48,16 +48,16 @@ const postProcessHtml = (html, postID, username) => {
         // Parse images
         html = html.replace(`<img src="${media.code}" alt="image">`, `
     <picture>
-    <source srcset="/public/${username}/${postID}/${media.filename}"
-            media="(min-width: 800px)">
-    <img src="/public/${username}/${postID}/${media.filename}" alt="">
+    <source srcset="/dist/media/${username}/${postID}/720p_${media.filename}.webp"
+            media="(min-width: 600px)">
+    <img src="/dist/media/${username}/${postID}/720p_${media.filename}.webp" alt="">
 </picture>
         `);
 
         // Parse videos
         html = html.replace(`<img src="${media.code}" alt="video">`, `
 <video controls width="250" style="display: block" preload="none">
-    <source src="/public/${username}/${postID}/${media.filename}">
+    <source src="/dist/media/${username}/${postID}/720p_${media.filename}.mp4">
 </video>`);
     })
     return html
