@@ -59,7 +59,9 @@ const postProcessHtml = (html, postID, username) => {
     <picture>
     <source srcset="/dist/media/${username}/${postID}/480p_${media.filename}.webp"
             media="(min-width: 600px)">
-    <img src="/dist/media/${username}/${postID}/480p_${media.filename}.webp" alt="">
+     <source srcset="/dist/media/${username}/${postID}/480p_${media.filename}.webp"
+            media="(min-width: 300px)">
+    <img src="/dist/media/${username}/${postID}/240p_${media.filename}.webp" alt="">
 </picture>
         `);
 
@@ -99,6 +101,7 @@ module.exports = async function handle_get(req, res){
 <!DOCTYPE html>
     <html lang="en">
         <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta charset="UTF-8">
         <title>${post.title}</title>
     <link rel="stylesheet" href="/dist/styles/main.css">
@@ -126,6 +129,7 @@ module.exports = async function handle_get(req, res){
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${post.title}</title>
     <link rel="stylesheet" href="/dist/styles/main.css">
     <style>
