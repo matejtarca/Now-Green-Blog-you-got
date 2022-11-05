@@ -42,7 +42,7 @@ const handlePublic = async (req, res) => {
 }
 
 const handleCreatePost = async (req, res) => {
-    const path = pathlib.resolve(pathlib.join(ROOT, 'src/frontend/create-post.html'));
+    const path = pathlib.resolve(pathlib.join(ROOT, 'src/frontend/create-post-minified.html'));
 
     res.setHeader('Content-Type', 'text/html');
 
