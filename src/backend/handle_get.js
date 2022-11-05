@@ -41,6 +41,15 @@ const handlePublic = async (req, res) => {
     stream.pipe(res);
 }
 
+const handleCreatePost = async (req, res) => {
+    const path = pathlib.resolve(pathlib.join(ROOT, 'src/frontend/create-post.html'));
+
+    res.setHeader('Content-Type', 'text/html');
+
+    const stream = fs.createReadStream(path);
+    stream.pipe(res);
+}
+
 const postProcessHtml = (html, postID, username) => {
     const getMedia = db.prepare('SELECT filename, code FROM medias WHERE post_id = ?');
     const medias = getMedia.all(postID);
@@ -48,16 +57,16 @@ const postProcessHtml = (html, postID, username) => {
         // Parse images
         html = html.replace(`<img src="${media.code}" alt="image">`, `
     <picture>
-    <source srcset="/dist/media/${username}/${postID}/720p_${media.filename}.webp"
+    <source srcset="/dist/media/${username}/${postID}/480p_${media.filename}.webp"
             media="(min-width: 600px)">
-    <img src="/dist/media/${username}/${postID}/720p_${media.filename}.webp" alt="">
+    <img src="/dist/media/${username}/${postID}/480p_${media.filename}.webp" alt="">
 </picture>
         `);
 
         // Parse videos
         html = html.replace(`<img src="${media.code}" alt="video">`, `
 <video controls width="250" style="display: block" preload="none">
-    <source src="/dist/media/${username}/${postID}/720p_${media.filename}.mp4">
+    <source src="/dist/media/${username}/${postID}/480p_${media.filename}.mp4">
 </video>`);
     })
     return html
@@ -136,6 +145,10 @@ module.exports = async function handle_get(req, res){
 </body>
 </html>
 `);
+    }
+
+    if (req.url.startsWith("/create-post")) {
+        return handleCreatePost(req, res);
     }
 
     if (req.url.startsWith("/dist/")) {
