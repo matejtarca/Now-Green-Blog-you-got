@@ -5,7 +5,9 @@ const getVideoResolution = require('./util/get_video_resolution');
 
 const db = require('better-sqlite3')('src/backend/db/db');
 
+const fs = require('fs');
 const sharp = require('sharp');
+const fileTypeCjs = require('file-type-cjs');
 
 const routeMap = new Map();
 routeMap.set('/upload', upload);
@@ -22,7 +24,7 @@ async function upload(req, res){
 		res.statusCode = 200;
 		res.end(tempFile.name);
 
-		processVideo(tempFile.name, './dist/temp', tempFile.name);
+		//processVideo(tempFile.name, './dist/temp', tempFile.name);
 	});
 
 	req.on('error', (error) => {
@@ -53,12 +55,49 @@ async function createPost(req, res){
 			insertMedias(medias); // nested transaction
 		});
 
-		query(req.body.files)
+		const files = req.body.files;
+
+		for (const file of files){
+			file.slug = file.slug.replace("/", "");
+			file.filename = file.filename.replace("/", "");
+		}
+
+		query(files);
+
 		res.statusCode = 200;
-		return res.end(post_id);
+		res.end(post_id);
+		
+		// continue with media processing
+
+		let videos = [];
+		let promises = [];
+
+		for (const media of files){
+			const stream = fs.createReadStream(`./dist/temp/${media.slug}`);
+			const fileType = await fileTypeCjs.fromStream(stream);
+			console.log(fileType);
+
+			if (fileType.mime.startsWith('video/')){
+				videos.push(media);
+			} else if (fileType.mime.startsWith('image/')){
+				promises.push(processImage(stream, './dist/temp', media.filename));
+			}
+		}
+
+		promises.push(processVideos(videos));
+		
+		await Promise.all(promises);
+
+		db.prepare('UPDATE posts SET ready = 1 WHERE id = ?').run(post_id);
 	} catch (e) {
 		res.statusCode = 500;
 		return res.end(e.message);
+	}
+}
+
+async function processVideos(videos){
+	for (const video of videos){
+		await processVideo(video.slug, './dist/temp', video.filename);
 	}
 }
 
@@ -104,10 +143,10 @@ const MAX_PARALLEL_OUTPUT_STREAMS = 3;
 async function processVideo(source, destination, filename){
 	const [ width, height, bitrate ] = await getVideoResolution(source);
 
-	const commandStart = `ffmpeg -y -hwaccel cuda -i ./dist/temp/${source}`;
+	const commandStart = `ffmpeg -y -hwaccel cuda -i "./dist/temp/${source}"`;
 	//const commandStart = `ffmpeg -y -i ./dist/temp/${source}`;
 
-	let command = commandStart + ` -c:a aac -b:a 96k -map a ${destination}/audio_${filename}.m4a`;
+	let command = `${commandStart} -c:a aac -b:a 96k -map a "${destination}/audio_${filename}.m4a"`;
 
 	let streams = 0;
 
@@ -121,7 +160,7 @@ async function processVideo(source, destination, filename){
 			targetWidth += 1;
 		}
 
-		command += ` -c:a aac -b:a ${quality.audioBitrate} -c:v h264_nvenc -preset p6 -vf "hwupload_cuda,scale_cuda=w=${targetWidth}:h=${quality.height}" -maxrate ${bitrate} -rc constqp -cq ${quality.quality} ${destination}/${quality.name}_${filename}`;
+		command += ` -c:a aac -b:a ${quality.audioBitrate} -c:v h264_nvenc -preset p6 -vf "hwupload_cuda,scale_cuda=w=${targetWidth}:h=${quality.height}" -maxrate ${bitrate} -rc constqp -cq ${quality.quality} "${destination}/${quality.name}_${filename}"`;
 		//command += ` -c:a copy -preset medium -vf scale=${targetWidth}:${quality.height} -crf ${quality.quality} ${destination}/${quality.name}_${filename}`;
 
 		console.log(command);
@@ -183,11 +222,11 @@ async function processImage(sourceBufferOrPath, destination, filename){
 
 		await image
 		.resize({ height: quality.height })
-		.webp({ lossless: lossless, effort: 6, quality: 80 })
+		.webp({ lossless: lossless, effort: 6 })
 		.toFile(`${destination}/${quality.name}_${filename}.webp`);
 	}
 }
-processImage('./dist/temp/cat-stars.jpg', './dist/temp', 'cat-stars');
+//processImage('./dist/temp/cat-stars.jpg', './dist/temp', 'cat-stars');
 
 module.exports = async function handle_post(req, res){
 	const handler = routeMap.get(req.url);
