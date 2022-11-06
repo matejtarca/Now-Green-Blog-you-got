@@ -46,6 +46,7 @@ async function createPost(req, res){
 		const insertMedias = db.transaction((medias) => {
 			for (const media of medias) {
 				const media_id = crypto.randomUUID();
+				media.id = media_id;
 				newMedia.run(media_id, post_id, media.slug, media.filename, media.code);
 			}
 		});
@@ -86,7 +87,9 @@ async function createPost(req, res){
 				media.filename = media.filename.slice(0, media.filename.lastIndexOf('.')) + ".mp4";
 				videos.push(media);
 			} else if (fileType.mime.startsWith('image/')){
-				promises.push(processImage(`./dist/temp/${media.slug}`, mediaDestination, media.filename));
+				promises.push(processImage(`./dist/temp/${media.slug}`, mediaDestination, media.filename).then((height) => {
+					db.prepare('UPDATE medias SET original_height = ? WHERE id = ?').run(height, media.id);
+				}));
 			}
 		}
 
@@ -234,6 +237,8 @@ async function processImage(sourceBufferOrPath, destination, filename){
 		.webp({ lossless: lossless, effort: 6 })
 		.toFile(`${destination}/${quality.name}_${filename}.webp`);
 	}
+
+	return metadata.height;
 }
 
 module.exports = async function handle_post(req, res){

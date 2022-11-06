@@ -43,6 +43,8 @@ function isJSON(req){
 }
 
 const server = http.createServer(async (req, res) => {
+	req.url = decodeURI(req.url);
+
 	if (req.method === 'POST'){
 		const requestsJSON = isJSON(req);
 

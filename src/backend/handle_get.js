@@ -50,20 +50,36 @@ const handleCreatePost = async (req, res) => {
     stream.pipe(res);
 }
 
+const imageHeights = [
+    { height: 1080, minWidth: 2400 },
+    { height: 720, minWidth: 1600 },
+    { height: 480, minWidth: 1067 },
+    { height: 240, minWidth: 533 },
+    { height: 144, minWidth: 320 }
+];
+
 const postProcessHtml = (html, postID, username) => {
-    const getMedia = db.prepare('SELECT filename, code FROM medias WHERE post_id = ?');
+    const getMedia = db.prepare('SELECT filename, code, original_height FROM medias WHERE post_id = ?');
     const medias = getMedia.all(postID);
     medias.forEach(media => {
         // Parse images
-        html = html.replace(`<img src="${media.code}" alt="image">`, `
-    <picture>
-    <source srcset="/dist/media/${username}/${postID}/480p_${media.filename}.webp"
-            media="(min-width: 600px)">
-     <source srcset="/dist/media/${username}/${postID}/480p_${media.filename}.webp"
-            media="(min-width: 300px)">
-    <img src="/dist/media/${username}/${postID}/240p_${media.filename}.webp" alt="">
-</picture>
-        `);
+        let picture = '<picture>';
+        
+        for (const height of imageHeights) {
+            if (media.original_height < height.height) {
+                continue;
+            }
+            picture += `
+<source srcset="/dist/media/${username}/${postID}/${height.height}p_${media.filename}.webp"
+        media="(min-width: ${height.minWidth}px)"></source>
+`
+        }
+
+        picture += `
+<img src="/dist/media/${username}/${postID}/240p_${media.filename}.webp" alt="">
+        </picture>`
+
+        html = html.replace(`<img src="${media.code}" alt="image">`, picture);
 
         // Parse videos
         html = html.replace(`<img src="${media.code}" alt="video">`, `
@@ -139,14 +155,17 @@ module.exports = async function handle_get(req, res){
     .content-main {
         padding: 15px;
         display: flex;
-        justify-content: start;
+        justify-content: center;
         align-items: center;
     }
     .content-inner {
         width: 60%;
     }
     .content {
-    margin-top: 15px;
+        margin-top: 15px;
+    }
+    .content img {
+        width: 100%;
     }
 </style>
 </head>

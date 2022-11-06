@@ -14,5 +14,6 @@ CREATE TABLE medias (
 	post_id TEXT,
    	tmp_slug TEXT,
    	filename TEXT,
-   	code TEXT
+   	code TEXT,
+	original_height INTEGER
 );
